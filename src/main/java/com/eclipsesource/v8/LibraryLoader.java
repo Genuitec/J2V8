@@ -14,6 +14,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
+
+import org.eclipse.core.runtime.FileLocator;
+import org.eclipse.core.runtime.Path;
 
 class LibraryLoader {
 
@@ -44,35 +48,25 @@ class LibraryLoader {
           return;
         }
         StringBuffer message = new StringBuffer();
-        String libShortName = computeLibraryShortName();
         String libFullName = computeLibraryFullName();
-        String ideLocation = System.getProperty("user.dir") + SEPARATOR + "jni" + SEPARATOR + computeLibraryFullName();
-        String path = null;
 
-        /* Try loading library from java library path */
-        if (load(libShortName, message)) {
-            return;
-        }
 
-        /* Try loading library from the IDE location */
-        if (new File(ideLocation).exists()) {
-            if (load(ideLocation, message)) {
+        URL file = FileLocator.find(Activator.getDefault().getBundle(),
+                new Path(libFullName), null);
+
+        try {
+            file = FileLocator.toFileURL(file);
+
+            if (load(file.getPath(), message)) {
                 return;
             }
-        }
 
-        if (tempDirectory != null) {
-            path = tempDirectory;
-        } else {
-            path = System.getProperty("user.home"); //$NON-NLS-1$
-        }
-
-        if (extract(path + SEPARATOR + libFullName, libFullName, message)) {
-            return;
+        } catch (IOException e) {
+            throw new RuntimeException("Could not load J2V8 library. Reason: " + e.getMessage(), e);
         }
 
         /* Failed to find the library */
-        throw new UnsatisfiedLinkError("Could not load J2V8 library. Reasons: " + message.toString()); //$NON-NLS-1$
+        throw new UnsatisfiedLinkError("Could not load J2V8 library. Reasons: " + message.toString());
     }
 
     static boolean load(final String libName, final StringBuffer message) {
@@ -174,8 +168,12 @@ class LibraryLoader {
     }
 
     static String getArchSuffix() {
-        String arch = System.getProperty("os.arch");
-        if (arch.equals("i686")) {
+        String arch = System.getProperty("osgi.arch");
+        if ("x86".equals(arch) || "x86_64".equals(arch)) {
+            return arch;
+        }
+        arch = System.getProperty("os.arch");
+        if (arch.equals("i686") || arch.equals("i386")) {
             return "x86";
         } else if (arch.equals("amd64")) {
             return "x86_64";
