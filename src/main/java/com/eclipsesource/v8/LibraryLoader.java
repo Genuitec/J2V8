@@ -57,7 +57,12 @@ class LibraryLoader {
         try {
             file = FileLocator.toFileURL(file);
 
-            if (load(file.getPath(), message)) {
+            String path = file.getPath();
+            if (path.startsWith("/") && isWindows()) {
+                path = path.substring(1).replace('/', '\\');
+            }
+
+            if (load(path, message)) {
                 return;
             }
 
